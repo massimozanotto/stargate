@@ -3,511 +3,207 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>STARGATE</title>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/hls.js/1.4.12/hls.min.js"></script>
-  <style>
-    @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Barlow:wght@300;500;700&display=swap');
+  <title>STARGATE — Rete Universitaria</title>
 
-    :root {
-      --bg:        #080b0f;
-      --panel:     #0d1117;
-      --border:    #1c2a38;
-      --accent:    #00e5ff;
-      --warn:      #ff4b4b;
-      --ok:        #00e676;
-      --muted:     #3a4a5a;
-      --text:      #c8d8e8;
-    }
+  <!-- Applica il tema PRIMA del rendering per evitare flash -->
+  <script>
+    (function () {
+      var VALID = ['dark','void','blue','light','steel','uda'];
+      var p = new URLSearchParams(location.search).get('theme');
+      document.documentElement.setAttribute('data-theme', VALID.includes(p) ? p : 'steel');
+    })();
+  </script>
 
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
-    body {
-      background: var(--bg);
-      color: var(--text);
-      font-family: 'Barlow', sans-serif;
-      min-height: 100vh;
-      display: flex;
-      flex-direction: column;
-    }
-
-    /* ── TOP BAR ── */
-    header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 10px 24px;
-      border-bottom: 1px solid var(--border);
-      background: var(--panel);
-      flex-shrink: 0;
-    }
-    .logo {
-      font-family: 'Share Tech Mono', monospace;
-      font-size: 1rem;
-      letter-spacing: .15em;
-      color: var(--accent);
-      display: flex;
-      align-items: center;
-      gap: 10px;
-    }
-    .logo-dot {
-      width: 8px; height: 8px;
-      border-radius: 50%;
-      background: var(--warn);
-      animation: blink 1.4s ease-in-out infinite;
-    }
-    @keyframes blink { 0%,100%{opacity:1} 50%{opacity:.2} }
-
-    .header-meta {
-      font-family: 'Share Tech Mono', monospace;
-      font-size: .72rem;
-      color: var(--muted);
-      text-align: right;
-      line-height: 1.6;
-    }
-    #clock { color: var(--accent); }
-
-    /* ── GRID ── */
-    main {
-      flex: 1;
-      padding: 16px;
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      grid-template-rows: repeat(3, 1fr);
-      gap: 10px;
-    }
-
-    .cam-cell {
-      position: relative;
-      background: #000;
-      border: 1px solid var(--border);
-      border-radius: 4px;
-      overflow: hidden;
-      cursor: pointer;
-      transition: border-color .2s;
-      aspect-ratio: 16/9;
-    }
-    .cam-cell:hover { border-color: var(--accent); }
-    .cam-cell.active { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
-    .cam-cell.fullscreen-open { border-color: var(--accent); }
-
-    .cam-cell video {
-      width: 100%; height: 100%;
-      object-fit: cover;
-      display: block;
-    }
-
-    /* overlay HUD */
-    .hud {
-      position: absolute;
-      inset: 0;
-      pointer-events: none;
-    }
-    .hud-top {
-      position: absolute;
-      top: 6px; left: 8px;
-      display: flex; align-items: center; gap: 6px;
-    }
-    .cam-label {
-      font-family: 'Share Tech Mono', monospace;
-      font-size: .65rem;
-      color: #fff;
-      background: rgba(0,0,0,.55);
-      padding: 2px 6px;
-      border-radius: 2px;
-      letter-spacing: .08em;
-    }
-    .status-dot {
-      width: 7px; height: 7px;
-      border-radius: 50%;
-      background: var(--muted);
-      transition: background .3s;
-    }
-    .status-dot.live  { background: var(--ok);   animation: blink 2s infinite; }
-    .status-dot.error { background: var(--warn);  animation: blink .7s infinite; }
-    .status-dot.loading { background: #f4c430;   animation: blink 1s infinite; }
-
-    .hud-bottom {
-      position: absolute;
-      bottom: 6px; right: 8px;
-      font-family: 'Share Tech Mono', monospace;
-      font-size: .6rem;
-      color: rgba(255,255,255,.5);
-    }
-
-    /* corner brackets */
-    .corner { position: absolute; width: 12px; height: 12px; border-color: var(--accent); border-style: solid; opacity: .6; }
-    .corner.tl { top: 4px;  left: 4px;  border-width: 1px 0 0 1px; }
-    .corner.tr { top: 4px;  right: 4px; border-width: 1px 1px 0 0; }
-    .corner.bl { bottom: 4px; left: 4px;  border-width: 0 0 1px 1px; }
-    .corner.br { bottom: 4px; right: 4px; border-width: 0 1px 1px 0; }
-
-    /* placeholder / error state */
-    .cam-placeholder {
-      position: absolute;
-      inset: 0;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      gap: 8px;
-      background: #05080c;
-      color: var(--muted);
-      font-family: 'Share Tech Mono', monospace;
-      font-size: .7rem;
-      text-align: center;
-      padding: 12px;
-    }
-    .cam-placeholder svg { opacity: .3; }
-    .cam-placeholder .err-msg { color: var(--warn); font-size: .65rem; margin-top: 4px; }
-    .cam-placeholder .retry-btn {
-      margin-top: 8px;
-      padding: 4px 12px;
-      background: transparent;
-      border: 1px solid var(--muted);
-      color: var(--muted);
-      border-radius: 2px;
-      font-family: 'Share Tech Mono', monospace;
-      font-size: .65rem;
-      cursor: pointer;
-      pointer-events: all;
-      transition: border-color .2s, color .2s;
-    }
-    .cam-placeholder .retry-btn:hover { border-color: var(--accent); color: var(--accent); }
-
-    /* fullscreen modal */
-    #modal {
-      display: none;
-      position: fixed;
-      inset: 0;
-      background: rgba(0,0,0,.92);
-      z-index: 999;
-      align-items: center;
-      justify-content: center;
-      flex-direction: column;
-      gap: 12px;
-    }
-    #modal.open { display: flex; }
-    #modal video {
-      max-width: 90vw;
-      max-height: 85vh;
-      border: 1px solid var(--accent);
-      border-radius: 4px;
-    }
-    #modal-label {
-      font-family: 'Share Tech Mono', monospace;
-      color: var(--accent);
-      font-size: .8rem;
-      letter-spacing: .1em;
-    }
-    #modal-close {
-      position: absolute;
-      top: 18px; right: 24px;
-      background: transparent;
-      border: 1px solid var(--muted);
-      color: var(--muted);
-      font-size: 1.1rem;
-      width: 32px; height: 32px;
-      border-radius: 50%;
-      cursor: pointer;
-      display: flex; align-items: center; justify-content: center;
-      transition: border-color .2s, color .2s;
-    }
-    #modal-close:hover { border-color: var(--warn); color: var(--warn); }
-
-    /* status bar */
-    footer {
-      padding: 6px 20px;
-      border-top: 1px solid var(--border);
-      background: var(--panel);
-      display: flex;
-      gap: 20px;
-      font-family: 'Share Tech Mono', monospace;
-      font-size: .65rem;
-      color: var(--muted);
-      flex-shrink: 0;
-    }
-    .stat { display: flex; align-items: center; gap: 5px; }
-    .stat span { color: var(--text); }
-
-    @media (max-width: 700px) {
-      main { grid-template-columns: 1fr 1fr; grid-template-rows: auto; }
-    }
-    @media (max-width: 440px) {
-      main { grid-template-columns: 1fr; }
-    }
-  </style>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="style.css" />
 </head>
 <body>
 
-<header>
-  <div class="logo">
-    <div class="logo-dot"></div>
-    Università D'Annunzio - Chieti / Pescara
+<!-- ══════════════════════════════════════════════
+     ANIMAZIONE DI AVVIO STARGATE
+     Rimossa automaticamente da JS dopo ~4.4s
+     ══════════════════════════════════════════════ -->
+<div id="stargate-intro">
+
+  <div class="sg-portal">
+    <!-- SVG: cerchi concentrici con archi rotanti -->
+    <!-- stroke impostato via CSS per supportare var(--accent) -->
+    <svg class="sg-svg" viewBox="0 0 300 300">
+
+      <!-- Anello di fondo decorativo -->
+      <circle class="sg-ring-full" cx="150" cy="150" r="146" stroke-width="1"/>
+
+      <!-- Arco 1 — grande, orario -->
+      <circle class="sg-arc sg-arc-1" cx="150" cy="150" r="134"/>
+
+      <!-- Arco 2 — antiorario -->
+      <circle class="sg-arc sg-arc-2" cx="150" cy="150" r="112"/>
+
+      <!-- Arco 3 — orario -->
+      <circle class="sg-arc sg-arc-3" cx="150" cy="150" r="90"/>
+
+      <!-- Arco 4 — antiorario -->
+      <circle class="sg-arc sg-arc-4" cx="150" cy="150" r="68"/>
+
+      <!-- Arco 5 — orario, interno -->
+      <circle class="sg-arc sg-arc-5" cx="150" cy="150" r="46"/>
+
+      <!-- Alone centrale -->
+      <circle class="sg-arc-dim" cx="150" cy="150" r="28"
+              stroke-width="8" stroke-dasharray="none" stroke-linecap="butt">
+        <animate attributeName="r"       values="22;30;22" dur="1.4s" repeatCount="indefinite"/>
+        <animate attributeName="opacity" values=".2;.5;.2" dur="1.4s" repeatCount="indefinite"/>
+      </circle>
+
+    </svg>
+
+    <!-- Nucleo luminoso centrale -->
+    <div class="sg-core"></div>
   </div>
-  <div class="header-meta">
+
+  <!-- Testo STARGATE -->
+  <div class="sg-text">STARGATE</div>
+  <div class="sg-subtitle">INIZIALIZZAZIONE CONNESSIONE</div>
+
+</div>
+
+<!-- ══════════════════════════════════════════════
+     HEADER: [logo host] | [orologio] | [partner]
+     ══════════════════════════════════════════════ -->
+<header>
+
+  <div class="header-host">
+    <div class="host-logo-wrap">
+      <img
+        src="https://www.unich.it/sites/default/files/logouda_bordooro_bis.png"
+        alt="Università D'Annunzio"
+        onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';"
+      />
+      <div class="host-logo-fallback">UdA</div>
+    </div>
+    <div class="host-info">
+      <div class="stargate-name">
+        <span class="stargate-icon"></span>
+        STARGATE
+      </div>
+      <div class="host-name">Università D'Annunzio · Chieti / Pescara</div>
+    </div>
+  </div>
+
+  <div class="header-clock">
     <div id="clock">--:--:--</div>
     <div id="date-str">---</div>
   </div>
+
+  <div class="header-partners" id="partner-logos"></div>
+
 </header>
 
+<!-- ══════════════════════════════════════════════
+     GRIGLIA FEED
+     ══════════════════════════════════════════════ -->
 <main id="grid"></main>
 
+<!-- ══════════════════════════════════════════════
+     FOCUS CONTROLS — navigazione rotazione
+     Visibile solo con ?layout=focus
+     ══════════════════════════════════════════════ -->
+<div id="focus-controls">
+  <button id="focus-prev">&#8249;</button>
+  <div id="focus-info">
+    <span id="focus-city"></span>
+    <span id="focus-univ"></span>
+    <span id="focus-progress"></span>
+  </div>
+  <button id="focus-next">&#8250;</button>
+</div>
+
+<!-- ══════════════════════════════════════════════
+     FOOTER: stats | ticker | temi | layout | [▼]
+     ══════════════════════════════════════════════ -->
 <footer>
-  <div class="stat">LIVE <span id="stat-live">0</span>/9</div>
-  <div class="stat">ERRORS <span id="stat-err">0</span></div>
-  <div class="stat">HLS.js <span id="hls-ver">—</span></div>
+
+  <div class="footer-content" id="footer-content">
+
+    <div class="stat">CONNESSE <span id="stat-live">0</span>/<span id="stat-total">0</span></div>
+    <div class="stat">NON DISP. <span id="stat-err">0</span></div>
+
+    <div class="ticker-wrap">
+      <div class="ticker-track" id="ticker-track"></div>
+    </div>
+
+    <!-- Selezione tema — cerchi bicolore (sfondo + accent) -->
+    <div class="theme-switcher" id="theme-switcher">
+      <button class="theme-btn" data-theme="dark"  title="dark — Scuro"></button>
+      <button class="theme-btn" data-theme="void"  title="void — Nero LED"></button>
+      <button class="theme-btn" data-theme="blue"  title="blue — Navy"></button>
+      <button class="theme-btn" data-theme="light" title="light — Chiaro"></button>
+      <button class="theme-btn" data-theme="steel" title="steel — Acciaio"></button>
+      <button class="theme-btn" data-theme="uda"   title="uda — Bordeaux"></button>
+    </div>
+
+    <!-- Selezione layout -->
+    <div class="layout-switcher">
+
+      <button class="layout-btn" data-layout="grid" title="Griglia 3×3">
+        <svg width="13" height="13" viewBox="0 0 13 13" fill="currentColor">
+          <rect x="0" y="0" width="5" height="5" rx="1"/>
+          <rect x="8" y="0" width="5" height="5" rx="1"/>
+          <rect x="0" y="8" width="5" height="5" rx="1"/>
+          <rect x="8" y="8" width="5" height="5" rx="1"/>
+        </svg>
+      </button>
+
+      <button class="layout-btn" data-layout="featured" title="In evidenza — 1 grande + 8 piccoli">
+        <svg width="13" height="13" viewBox="0 0 13 13" fill="currentColor">
+          <rect x="0" y="0" width="8" height="8" rx="1"/>
+          <rect x="9" y="0" width="4" height="4" rx="1"/>
+          <rect x="9" y="5" width="4" height="4" rx="1"/>
+          <rect x="0" y="9" width="4" height="4" rx="1"/>
+          <rect x="5" y="9" width="4" height="4" rx="1"/>
+          <rect x="9" y="10" width="4" height="3" rx="1"/>
+        </svg>
+      </button>
+
+      <button class="layout-btn" data-layout="focus" title="Rotazione — 1 grande + sidebar">
+        <svg width="13" height="13" viewBox="0 0 13 13" fill="currentColor">
+          <rect x="0" y="0" width="8" height="13" rx="1"/>
+          <rect x="9" y="0" width="4" height="3" rx="1"/>
+          <rect x="9" y="4" width="4" height="3" rx="1"/>
+          <rect x="9" y="8" width="4" height="3" rx="1"/>
+          <rect x="9" y="12" width="4" height="1" rx=".5"/>
+        </svg>
+      </button>
+
+    </div>
+
+    <div class="footer-brand">STARGATE NETWORK · RETE UNIVERSITARIA EUROPEA</div>
+
+  </div><!-- /footer-content -->
+
+  <!-- Pulsante collassa/espandi — sempre visibile -->
+  <button id="footer-toggle" title="Comprimi / Espandi barra">
+    <svg width="11" height="7" viewBox="0 0 11 7" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+      <polyline points="1,1 5.5,6 10,1"/>
+    </svg>
+  </button>
+
 </footer>
 
-<!-- fullscreen modal -->
+<!-- ══════════════════════════════════════════════
+     MODAL FULLSCREEN
+     ══════════════════════════════════════════════ -->
 <div id="modal">
   <button id="modal-close">✕</button>
   <div id="modal-label"></div>
   <video id="modal-video" autoplay muted playsinline controls></video>
 </div>
 
-<script>
-// ══════════════════════════════════════════════
-//  CONFIGURAZIONE TELECAMERE
-//  Sostituisci gli URL con i tuoi stream HLS (.m3u8)
-//  oppure stream MJPEG diretti (http://ip/video.mjpg)
-// ══════════════════════════════════════════════
-const CAMERAS = [
-  { id: 'Parigi', label: 'Uninsubria', url: 'https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8' },
-  { id: 'Madrid', label: 'Piemonte orientale', url: 'https://5e0add8153fcd.streamlock.net:1936/vedetta/levanto.stream/playlist.m3u8' },
-  { id: 'Stoccolma', label: 'Pavia',          url: 'https://content.jwplatform.com/manifests/vM7nH0Kl.m3u8' },
-  { id: 'Berlino', label: 'UFFICIO RECEPTION',    url: 'https://cdn-007.whatsupcams.com/hls/hr_bol05.m3u8' },
-  { id: 'Praga', label: 'SALA SERVER',          url: 'http://playertest.longtailvideo.com/adaptive/wowzaid3/playlist.m3u8' },
-  { id: 'Lisbona', label: 'USCITA EMERGENZA',     url: 'https://cdn-002.whatsupcams.com/hls/hr_bol04.m3u8' },
-  { id: 'Zurigo', label: 'MAGAZZINO',            url: 'https://cdn-008.whatsupcams.com/hls/it_anterselva04.m3u8' },
-  { id: 'Londra', label: 'PERIMETRO EST',        url: 'https://cdn-005.whatsupcams.com/hls/it_palau05.m3u8' },
-  { id: 'Dublino', label: 'TETTO / PANORAMICA',   url: 'https://cdn-005.whatsupcams.com/hls/it_caorle10.m3u8' },
-];
+<!-- Ordine obbligatorio: hls → config → app -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/hls.js/1.4.12/hls.min.js"></script>
+<script src="config.js"></script>
+<script src="app.js"></script>
 
-// ══════════════════════════════════════════════
-// Se vuoi usare MJPEG invece di HLS per alcune cam,
-// imposta type:'mjpeg' nella config della camera:
-// { id:'CAM-01', label:'...', url:'http://...', type:'mjpeg' }
-// ══════════════════════════════════════════════
-
-const hlsInstances = {};
-const camStates    = {};   // 'loading' | 'live' | 'error' | 'unconfigured'
-let liveCount = 0, errCount = 0;
-
-function updateFooter() {
-  document.getElementById('stat-live').textContent = liveCount;
-  document.getElementById('stat-err').textContent  = errCount;
-}
-
-function setStatus(idx, state) {
-  const prev = camStates[idx];
-  if (prev === state) return;
-  camStates[idx] = state;
-  if (prev === 'live')  liveCount--;
-  if (prev === 'error') errCount--;
-  if (state === 'live')  liveCount++;
-  if (state === 'error') errCount++;
-  updateFooter();
-
-  const dot = document.querySelector(`#cell-${idx} .status-dot`);
-  if (dot) { dot.className = 'status-dot ' + state; }
-}
-
-// ── Build grid ──
-const grid = document.getElementById('grid');
-
-CAMERAS.forEach((cam, idx) => {
-  const cell = document.createElement('div');
-  cell.className = 'cam-cell';
-  cell.id = `cell-${idx}`;
-
-  cell.innerHTML = `
-    <video id="vid-${idx}" autoplay muted playsinline></video>
-    <div class="cam-placeholder" id="ph-${idx}" style="display:none">
-      <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2">
-        <path d="M23 7l-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/>
-        <line x1="1" y1="1" x2="23" y2="23" stroke-width="1.5"/>
-      </svg>
-      <div id="ph-msg-${idx}">NO SIGNAL</div>
-      <div class="err-msg" id="ph-err-${idx}"></div>
-      <button class="retry-btn" onclick="initCamera(${idx})">↺ RETRY</button>
-    </div>
-    <div class="hud">
-      <div class="hud-top">
-        <div class="status-dot loading"></div>
-        <div class="cam-label">${cam.id}</div>
-      </div>
-      <div class="hud-bottom">${cam.label}</div>
-      <div class="corner tl"></div>
-      <div class="corner tr"></div>
-      <div class="corner bl"></div>
-      <div class="corner br"></div>
-    </div>
-  `;
-
-  cell.addEventListener('click', () => openModal(idx));
-  grid.appendChild(cell);
-  camStates[idx] = 'loading';
-});
-
-// ── Init each camera ──
-function initCamera(idx) {
-  const cam = CAMERAS[idx];
-  const video = document.getElementById(`vid-${idx}`);
-  const ph    = document.getElementById(`ph-${idx}`);
-  const phMsg = document.getElementById(`ph-msg-${idx}`);
-  const phErr = document.getElementById(`ph-err-${idx}`);
-
-  // destroy previous HLS instance if any
-  if (hlsInstances[idx]) {
-    hlsInstances[idx].destroy();
-    delete hlsInstances[idx];
-  }
-
-  ph.style.display = 'none';
-  video.style.display = 'block';
-  setStatus(idx, 'loading');
-
-  if (!cam.url) {
-    ph.style.display = 'flex';
-    video.style.display = 'none';
-    phMsg.textContent = 'URL NON CONFIGURATO';
-    phErr.textContent = `Inserisci l'URL in CAMERAS[${idx}]`;
-    setStatus(idx, 'unconfigured');
-    return;
-  }
-
-  // MJPEG: direct <img> or video src
-  if (cam.type === 'mjpeg') {
-    video.style.display = 'none';
-    const img = document.createElement('img');
-    img.src = cam.url;
-    img.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;object-fit:cover;';
-    img.onload  = () => setStatus(idx, 'live');
-    img.onerror = () => { setStatus(idx, 'error'); showError(idx, 'Stream non raggiungibile'); };
-    document.getElementById(`cell-${idx}`).insertBefore(img, video);
-    return;
-  }
-
-  // HLS
-  if (Hls.isSupported()) {
-    const hls = new Hls({
-      lowLatencyMode: true,
-      backBufferLength: 30,
-    });
-    hlsInstances[idx] = hls;
-    hls.loadSource(cam.url);
-    hls.attachMedia(video);
-
-    hls.on(Hls.Events.MANIFEST_PARSED, () => {
-      video.play().catch(() => {});
-      setStatus(idx, 'live');
-    });
-
-    hls.on(Hls.Events.ERROR, (_, data) => {
-      if (data.fatal) {
-        setStatus(idx, 'error');
-        showError(idx, data.type + ': ' + data.details);
-      }
-    });
-
-  } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
-    // Safari native HLS
-    video.src = cam.url;
-    video.addEventListener('loadedmetadata', () => {
-      video.play().catch(() => {});
-      setStatus(idx, 'live');
-    });
-    video.addEventListener('error', () => {
-      setStatus(idx, 'error');
-      showError(idx, 'Errore caricamento stream');
-    });
-  } else {
-    showError(idx, 'HLS non supportato dal browser');
-    setStatus(idx, 'error');
-  }
-}
-
-function showError(idx, msg) {
-  const ph    = document.getElementById(`ph-${idx}`);
-  const video = document.getElementById(`vid-${idx}`);
-  const phMsg = document.getElementById(`ph-msg-${idx}`);
-  const phErr = document.getElementById(`ph-err-${idx}`);
-  ph.style.display = 'flex';
-  video.style.display = 'none';
-  phMsg.textContent = 'SEGNALE PERSO';
-  phErr.textContent = msg || '';
-}
-
-// ── Fullscreen modal ──
-const modal      = document.getElementById('modal');
-const modalVideo = document.getElementById('modal-video');
-const modalLabel = document.getElementById('modal-label');
-let   modalHls   = null;
-
-function openModal(idx) {
-  const cam = CAMERAS[idx];
-  if (!cam.url || camStates[idx] === 'unconfigured') return;
-
-  modal.classList.add('open');
-  modalLabel.textContent = `${cam.id} — ${cam.label}`;
-
-  if (modalHls) { modalHls.destroy(); modalHls = null; }
-
-  if (cam.type === 'mjpeg') {
-    modalVideo.src = '';
-    modalVideo.style.display = 'none';
-    // show img instead — simple approach
-    let mimg = modal.querySelector('img.modal-img');
-    if (!mimg) { mimg = document.createElement('img'); mimg.className='modal-img'; mimg.style.cssText='max-width:90vw;max-height:85vh;border:1px solid var(--accent);border-radius:4px;'; modal.insertBefore(mimg, modalLabel); }
-    mimg.src = cam.url;
-  } else {
-    modalVideo.style.display = '';
-    const mimg = modal.querySelector('img.modal-img');
-    if (mimg) mimg.remove();
-
-    if (Hls.isSupported()) {
-      modalHls = new Hls({ lowLatencyMode: true });
-      modalHls.loadSource(cam.url);
-      modalHls.attachMedia(modalVideo);
-      modalHls.on(Hls.Events.MANIFEST_PARSED, () => modalVideo.play().catch(()=>{}));
-    } else {
-      modalVideo.src = cam.url;
-      modalVideo.play().catch(()=>{});
-    }
-  }
-}
-
-document.getElementById('modal-close').addEventListener('click', () => {
-  modal.classList.remove('open');
-  if (modalHls) { modalHls.destroy(); modalHls = null; }
-  modalVideo.src = '';
-  modalVideo.pause();
-});
-modal.addEventListener('click', e => { if (e.target === modal) document.getElementById('modal-close').click(); });
-document.addEventListener('keydown', e => { if (e.key === 'Escape') document.getElementById('modal-close').click(); });
-
-// ── Clock ──
-function tick() {
-  const now = new Date();
-  document.getElementById('clock').textContent =
-    now.toTimeString().slice(0,8);
-  document.getElementById('date-str').textContent =
-    now.toLocaleDateString('it-IT', { weekday:'short', day:'2-digit', month:'short', year:'numeric' }).toUpperCase();
-}
-tick(); setInterval(tick, 1000);
-
-// ── HLS version ──
-document.getElementById('hls-ver').textContent = Hls.version || '—';
-
-// ── Start all cameras ──
-CAMERAS.forEach((_, idx) => initCamera(idx));
-
-// ── Auto-retry errors every 30s ──
-setInterval(() => {
-  CAMERAS.forEach((_, idx) => {
-    if (camStates[idx] === 'error') initCamera(idx);
-  });
-}, 30000);
-</script>
 </body>
 </html>

@@ -1,0 +1,17 @@
+<!-- Placeholder UdA — sostituire con il logo ufficiale dell'Università D'Annunzio -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 60" width="120" height="60">
+  <rect width="120" height="60" fill="none"/>
+  <!-- Scudo stilizzato -->
+  <path d="M30 8 L50 8 L50 32 Q50 44 40 50 Q30 44 30 32 Z"
+        fill="none" stroke="white" stroke-width="2"/>
+  <!-- Lettera U al centro -->
+  <text x="40" y="36" font-family="serif" font-size="20" font-weight="700"
+        fill="white" text-anchor="middle">U</text>
+  <!-- Nome -->
+  <text x="78" y="24" font-family="sans-serif" font-size="9" font-weight="600"
+        fill="white" text-anchor="middle" letter-spacing="1">D'ANNUNZIO</text>
+  <text x="78" y="36" font-family="sans-serif" font-size="7"
+        fill="rgba(255,255,255,0.7)" text-anchor="middle" letter-spacing="0.5">CHIETI · PESCARA</text>
+  <!-- Linea decorativa -->
+  <line x1="58" y1="28" x2="100" y2="28" stroke="rgba(255,255,255,0.3)" stroke-width="0.5"/>
+</svg>
